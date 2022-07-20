@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace BinanceInterceptor.Controllers
 {
@@ -15,57 +14,100 @@ namespace BinanceInterceptor.Controllers
     {
         private readonly IMemoryCache _memoryCache;
 
-        //public string tickerResult = "";
-        //public string exchangeInfoResult = "";
-        //public string pingResult = "";
-        //public string snapshotDepthResult = "";
-        //public string serverTimeResult = "";
-
         public BinanceController(IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;
         }
 
+        //.US DOMAIN ENDPOINTS
+        //============================================================================
 
         [HttpGet]
-        [Route("ticker/24hr")]
+        [Route("us/ticker/24hr")]
         public string Ticker()
         {
-            _memoryCache.TryGetValue("ticker", out string tickerResult);
+            _memoryCache.TryGetValue("usTicker", out string tickerResult);
             return tickerResult;
         }
 
         [HttpGet]
-        [Route("exchangeInfo")]
+        [Route("us/exchangeInfo")]
         public string Exchange()
         {
-            _memoryCache.TryGetValue("exchangeInfo", out string exchangeInfoResult);
+            _memoryCache.TryGetValue("usExchangeInfo", out string exchangeInfoResult);
             return exchangeInfoResult;
         }
 
         [HttpGet]
-        [Route("ping")]
+        [Route("us/ping")]
         public string Ping()
         {
-            _memoryCache.TryGetValue("ping", out string pingResult);
+            _memoryCache.TryGetValue("usPing", out string pingResult);
             return pingResult;
         }
 
         [HttpGet]
-        [Route("depth")]
+        [Route("us/depth")]
         public string Depth([FromRoute] string symbol)
         {
-            _memoryCache.TryGetValue("depth", out string snapshotDepthResult);
+            _memoryCache.TryGetValue("usDepthBtcUsdt", out string snapshotDepthResult);
             return snapshotDepthResult;
         }
 
         [HttpGet]
-        [Route("time")]
-        public string Time()
+        [Route("us/time")]
+        public ActionResult Time()
         {
-            _memoryCache.TryGetValue("time", out string serverTimeResult);
+            _memoryCache.TryGetValue("usTime", out string serverTimeResult);
+            Response.ContentType = "application/json";
+            return Ok(serverTimeResult);
+        }
+
+        //.COM DOMAIN ENDPOINTS
+        //============================================================================
+
+        [HttpGet]
+        [Route("com/ticker/24hr")]
+        public string ComTicker()
+        {
+            _memoryCache.TryGetValue("comTicker", out string tickerResult);
+            return tickerResult;
+        }
+
+        [HttpGet]
+        [Route("com/exchangeInfo")]
+        public string ComExchange()
+        {
+            _memoryCache.TryGetValue("comExchangeInfo", out string exchangeInfoResult);
+            return exchangeInfoResult;
+        }
+
+        [HttpGet]
+        [Route("com/ping")]
+        public string ComPing()
+        {
+            _memoryCache.TryGetValue("comPing", out string pingResult);
+            return pingResult;
+        }
+
+        [HttpGet]
+        [Route("com/depth")]
+        public string ComDepth([FromRoute] string symbol)
+        {
+            _memoryCache.TryGetValue("comDepthBtcUsdt", out string snapshotDepthResult);
+            return snapshotDepthResult;
+        }
+
+        [HttpGet]
+        [Route("com/time")]
+        public string ComTime()
+        {
+            _memoryCache.TryGetValue("comTime", out string serverTimeResult);
             return serverTimeResult;
         }
+
+        //STREAM.BINANCE.COM WEBSOCKET
+        //=================================================================================
 
         [HttpGet("/ws")]
         public async Task Get()
@@ -97,7 +139,7 @@ namespace BinanceInterceptor.Controllers
 
             }
 
-            Debug.WriteLine(LogLevel.Information, "Message received from Client");
+            Debug.WriteLine(LogLevel.Information, "Message received from Client, starting Websocket conneciton");
             //var timer = new PeriodicTimer(TimeSpan.FromSeconds(0.05));
             MemoryStream lastBinanceDataStream = new MemoryStream();
 
