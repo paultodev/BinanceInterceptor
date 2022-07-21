@@ -56,11 +56,11 @@ namespace BinanceInterceptor.Controllers
 
         [HttpGet]
         [Route("us/time")]
-        public ActionResult Time()
+        public async Task<ActionResult> TimeAsync()
         {
-            _memoryCache.TryGetValue("usTime", out string serverTimeResult);
-            Response.ContentType = "application/json";
-            return Ok(serverTimeResult);
+            return await GetResultFromMemoryCacheAsync("usTime");
+            //Response.Headers.ContentType = "application/json;charset=UTF-8";
+            //return new ResponseMessage;
         }
 
         //.COM DOMAIN ENDPOINTS
@@ -104,6 +104,23 @@ namespace BinanceInterceptor.Controllers
         {
             _memoryCache.TryGetValue("comTime", out string serverTimeResult);
             return serverTimeResult;
+        }
+
+        private async Task<ActionResult> GetResultFromMemoryCacheAsync(string cacheKey)
+        {
+            _memoryCache.TryGetValue(cacheKey, out HttpResponseMessage cachedHttpResponse);
+            if (cachedHttpResponse != null)
+            {
+                foreach (var header in cachedHttpResponse.Content.Headers)
+                {
+                    string headerName = header.Key;
+                    string headerContent = string.Join(";", header.Value.ToArray());
+                    Response.Headers.Add(headerName, headerContent);
+                }
+                var data = await cachedHttpResponse.Content.ReadAsStringAsync();
+                return Content(data);
+            }
+            return BadRequest();
         }
 
         //STREAM.BINANCE.COM WEBSOCKET

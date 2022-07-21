@@ -48,12 +48,15 @@ namespace BinanceInterceptor.BackgroundTasks
 
         protected async Task GetApiDataAsync(ApiEndpoint apiEndpoint)
         {
-            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, apiEndpoint.Url);
-            var httpResponseMessage = await _httpClient.SendAsync(httpRequestMessage);
+            //var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, apiEndpoint.Url);
+            //var httpResponseMessage = await _httpClient.SendAsync(httpRequestMessage);
+            //var httpResponseMessage = await _httpClient.SendAsync(httpRequestMessage);
+            var httpResponseMessage = await _httpClient.GetAsync(apiEndpoint.Url);
             if (httpResponseMessage.IsSuccessStatusCode)
             {
-                var result = await httpResponseMessage.Content.ReadAsStringAsync();
-                _memoryCache.Set(apiEndpoint.MemoryCacheKey, result);
+                //var result = await httpResponseMessage.Content.ReadAsStringAsync();
+                //_memoryCache.Set(apiEndpoint.MemoryCacheKey, result);
+                _memoryCache.Set(apiEndpoint.MemoryCacheKey, httpResponseMessage);
                 //Debug.WriteLine("Setting memory cache: " + apiEndpoint.MemoryCacheKey + "\nResult: " + result);
             }
             else
