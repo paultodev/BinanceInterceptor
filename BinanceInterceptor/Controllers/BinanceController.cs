@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
+using RestSharp;
 using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
@@ -24,43 +25,48 @@ namespace BinanceInterceptor.Controllers
 
         [HttpGet]
         [Route("us/ticker/24hr")]
-        public string Ticker()
+        public ActionResult Ticker([FromQuery] string symbol)
         {
-            _memoryCache.TryGetValue("usTicker", out string tickerResult);
-            return tickerResult;
+            //_memoryCache.TryGetValue("usTicker", out string tickerResult);
+            //return tickerResult;
+            return GetResultFromMemoryCacheAsync("usTicker");
         }
 
         [HttpGet]
         [Route("us/exchangeInfo")]
-        public string Exchange()
+        public ActionResult Exchange()
         {
-            _memoryCache.TryGetValue("usExchangeInfo", out string exchangeInfoResult);
-            return exchangeInfoResult;
+            //_memoryCache.TryGetValue("usExchangeInfo", out string exchangeInfoResult);
+            //return exchangeInfoResult;
+            return GetResultFromMemoryCacheAsync("usExchangeInfo");
         }
 
         [HttpGet]
         [Route("us/ping")]
-        public string Ping()
+        public ActionResult Ping()
         {
-            _memoryCache.TryGetValue("usPing", out string pingResult);
-            return pingResult;
+            //_memoryCache.TryGetValue("usPing", out string pingResult);
+            //return pingResult;
+            return GetResultFromMemoryCacheAsync("usPing");
         }
 
         [HttpGet]
         [Route("us/depth")]
-        public string Depth([FromRoute] string symbol)
+        public ActionResult Depth([FromQuery] string symbol, int limit)
         {
-            _memoryCache.TryGetValue("usDepthBtcUsdt", out string snapshotDepthResult);
-            return snapshotDepthResult;
+            //_memoryCache.TryGetValue("usDepthBtcUsdt", out string snapshotDepthResult);
+            //return snapshotDepthResult;
+            return GetResultFromMemoryCacheAsync("usDepthBtcUsdt");
         }
 
         [HttpGet]
         [Route("us/time")]
-        public async Task<ActionResult> TimeAsync()
+        public ActionResult TimeAsync()
         {
-            return await GetResultFromMemoryCacheAsync("usTime");
             //Response.Headers.ContentType = "application/json;charset=UTF-8";
             //return new ResponseMessage;
+            //Response.Headers.ContentType = "application/x-www-form-urlencoded";
+            return GetResultFromMemoryCacheAsync("usTime");
         }
 
         //.COM DOMAIN ENDPOINTS
@@ -68,59 +74,80 @@ namespace BinanceInterceptor.Controllers
 
         [HttpGet]
         [Route("com/ticker/24hr")]
-        public string ComTicker()
+        public ActionResult ComTicker([FromQuery] string symbol)
         {
-            _memoryCache.TryGetValue("comTicker", out string tickerResult);
-            return tickerResult;
+            //_memoryCache.TryGetValue("comTicker", out string tickerResult);
+            //return tickerResult;
+            return GetResultFromMemoryCacheAsync("comTicker");
         }
 
         [HttpGet]
         [Route("com/exchangeInfo")]
-        public string ComExchange()
+        public ActionResult ComExchange()
         {
-            _memoryCache.TryGetValue("comExchangeInfo", out string exchangeInfoResult);
-            return exchangeInfoResult;
+            //_memoryCache.TryGetValue("comExchangeInfo", out string exchangeInfoResult);
+            //return exchangeInfoResult;
+            return GetResultFromMemoryCacheAsync("comExchangeInfo");
         }
 
         [HttpGet]
         [Route("com/ping")]
-        public string ComPing()
+        public ActionResult ComPing()
         {
-            _memoryCache.TryGetValue("comPing", out string pingResult);
-            return pingResult;
+            //_memoryCache.TryGetValue("comPing", out string pingResult);
+            //return pingResult;
+            return GetResultFromMemoryCacheAsync("comPing");
         }
 
         [HttpGet]
         [Route("com/depth")]
-        public string ComDepth([FromRoute] string symbol)
+        public ActionResult ComDepth([FromQuery] string symbol, int limit)
         {
-            _memoryCache.TryGetValue("comDepthBtcUsdt", out string snapshotDepthResult);
-            return snapshotDepthResult;
+            //_memoryCache.TryGetValue("comDepthBtcUsdt", out string snapshotDepthResult);
+            //return snapshotDepthResult;
+            return GetResultFromMemoryCacheAsync("comDepthBtcUsdt");
         }
 
         [HttpGet]
         [Route("com/time")]
-        public string ComTime()
+        public ActionResult ComTimeAsync()
         {
-            _memoryCache.TryGetValue("comTime", out string serverTimeResult);
-            return serverTimeResult;
+            //_memoryCache.TryGetValue("comTime", out string serverTimeResult);
+            //return serverTimeResult;
+            //Response.Headers.ContentType = "application/x-www-form-urlencoded";
+            return GetResultFromMemoryCacheAsync("comTime");
         }
 
-        private async Task<ActionResult> GetResultFromMemoryCacheAsync(string cacheKey)
+        private ActionResult GetResultFromMemoryCacheAsync(string cacheKey)
         {
-            _memoryCache.TryGetValue(cacheKey, out HttpResponseMessage cachedHttpResponse);
+            _memoryCache.TryGetValue(cacheKey, out RestResponse cachedHttpResponse);
             if (cachedHttpResponse != null)
             {
-                foreach (var header in cachedHttpResponse.Content.Headers)
+                foreach (var header in cachedHttpResponse.Headers)
                 {
-                    string headerName = header.Key;
-                    string headerContent = string.Join(";", header.Value.ToArray());
-                    Response.Headers.Add(headerName, headerContent);
+                    Response.Headers.Add(header.Name, header.Value.ToString());
                 }
-                var data = await cachedHttpResponse.Content.ReadAsStringAsync();
-                return Content(data);
+                Response.ContentType = "application/json;charset=UTF-8";
+                Response.StatusCode = 200;
+                return Content(cachedHttpResponse.Content);
             }
             return BadRequest();
+
+
+
+            //_memoryCache.TryGetValue(cacheKey, out HttpResponseMessage cachedHttpResponse);
+            //if (cachedHttpResponse != null)
+            //{
+            //    foreach (var header in cachedHttpResponse.Content.Headers)
+            //    {
+            //        string headerName = header.Key;
+            //        string headerContent = string.Join(";", header.Value.ToArray());
+            //        Response.Headers.Add(headerName, headerContent);
+            //    }
+            //    var data = await cachedHttpResponse.Content.ReadAsStringAsync();
+            //    return Content(data);
+            //}
+            //return BadRequest();
         }
 
         //STREAM.BINANCE.COM WEBSOCKET
@@ -131,7 +158,12 @@ namespace BinanceInterceptor.Controllers
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+                using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
+                {
+                    DangerousEnableCompression = true,
+                    DisableServerContextTakeover = true,
+                    ServerMaxWindowBits = 15 
+                });
                 Debug.WriteLine(LogLevel.Information, "WebSocket connection established");
                 await Echo(webSocket);
             }

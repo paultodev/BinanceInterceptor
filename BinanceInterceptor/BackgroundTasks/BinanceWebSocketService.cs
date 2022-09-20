@@ -20,7 +20,7 @@ namespace BinanceInterceptor.BackgroundTasks
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             Console.WriteLine("BinanceWebSocketService ExecuteAsync: ");
-            using(var socket = new ClientWebSocket())
+            using (var socket = new ClientWebSocket())
             {
                 string subscribeString1 = "{\"method\": \"SUBSCRIBE\", \"params\": [\"btcusdt@trade\"], \"id\": 1}";
                 string subscribeString2 = "{\"method\": \"SUBSCRIBE\", \"params\": [\"btcusdt@depth@100ms\"], \"id\": 2}";
@@ -29,7 +29,7 @@ namespace BinanceInterceptor.BackgroundTasks
                 await socket.ConnectAsync(new Uri("wss://stream.binance.com:9443/ws"), CancellationToken.None);
                 await Send(socket, subscribeString1);
                 await Send(socket, subscribeString2);
-                
+
                 await Receive(socket, stoppingToken);
 
             }
@@ -45,6 +45,7 @@ namespace BinanceInterceptor.BackgroundTasks
             while (!stoppingToken.IsCancellationRequested)
             {
                 WebSocketReceiveResult result;
+
                 using (var ms = new MemoryStream())
                 {
                     do
