@@ -17,6 +17,8 @@ namespace BinanceInterceptor.BackgroundTasks
             _memoryCache = memoryCache;
         }
 
+        //This will reach out to ws://stream.binance.com and subscribe to 2 data streams, and then
+        //call a recive function passing in the recieved data.
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             Console.WriteLine("BinanceWebSocketService ExecuteAsync: ");
@@ -27,6 +29,7 @@ namespace BinanceInterceptor.BackgroundTasks
 
                 Debug.WriteLine("Connecting Websocket client....");
                 await socket.ConnectAsync(new Uri("wss://stream.binance.com:9443/ws"), CancellationToken.None);
+
                 await Send(socket, subscribeString1);
                 await Send(socket, subscribeString2);
 
@@ -38,6 +41,9 @@ namespace BinanceInterceptor.BackgroundTasks
         static async Task Send(ClientWebSocket socket, string data) =>
             await socket.SendAsync(Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text, true, CancellationToken.None);
 
+        //The data recieved from binance stream is being added to the global memory cache of the asp.net application
+        //under the 'binanceStreamData' key. All the client that then connect to this API will get their websocket data
+        //from this memory cache holding the latest streamed data from binance. (See BinanceController.cs)
         private async Task Receive(ClientWebSocket socket, CancellationToken stoppingToken)
         {
             Debug.WriteLine("In Receive Task of BinanceWebsocketService.cs");

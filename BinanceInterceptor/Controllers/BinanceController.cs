@@ -20,15 +20,15 @@ namespace BinanceInterceptor.Controllers
             _memoryCache = memoryCache;
         }
 
-        //.US DOMAIN ENDPOINTS
-        //============================================================================
+        #region BINANCE.US ENDPOINTS
+        //These are replicated API endpoints with data that is pulled from api.binance.us.
+        //The RefreshBinanceValuesServices.cs polls the binance api endpoint and saves the data
+        //to memory cache, which is then exposed here for clients to read
 
         [HttpGet]
         [Route("us/ticker/24hr")]
         public ActionResult Ticker([FromQuery] string symbol)
         {
-            //_memoryCache.TryGetValue("usTicker", out string tickerResult);
-            //return tickerResult;
             return GetResultFromMemoryCacheAsync("usTicker");
         }
 
@@ -36,8 +36,6 @@ namespace BinanceInterceptor.Controllers
         [Route("us/exchangeInfo")]
         public ActionResult Exchange()
         {
-            //_memoryCache.TryGetValue("usExchangeInfo", out string exchangeInfoResult);
-            //return exchangeInfoResult;
             return GetResultFromMemoryCacheAsync("usExchangeInfo");
         }
 
@@ -45,8 +43,6 @@ namespace BinanceInterceptor.Controllers
         [Route("us/ping")]
         public ActionResult Ping()
         {
-            //_memoryCache.TryGetValue("usPing", out string pingResult);
-            //return pingResult;
             return GetResultFromMemoryCacheAsync("usPing");
         }
 
@@ -54,8 +50,6 @@ namespace BinanceInterceptor.Controllers
         [Route("us/depth")]
         public ActionResult Depth([FromQuery] string symbol, int limit)
         {
-            //_memoryCache.TryGetValue("usDepthBtcUsdt", out string snapshotDepthResult);
-            //return snapshotDepthResult;
             return GetResultFromMemoryCacheAsync("usDepthBtcUsdt");
         }
 
@@ -63,21 +57,20 @@ namespace BinanceInterceptor.Controllers
         [Route("us/time")]
         public ActionResult TimeAsync()
         {
-            //Response.Headers.ContentType = "application/json;charset=UTF-8";
-            //return new ResponseMessage;
-            //Response.Headers.ContentType = "application/x-www-form-urlencoded";
             return GetResultFromMemoryCacheAsync("usTime");
         }
+        #endregion
 
-        //.COM DOMAIN ENDPOINTS
-        //============================================================================
+
+        #region BINANCE.COM ENDPOINTS
+        //These are replicated API endpoints with data that is pulled from api.binance.com.
+        //The RefreshBinanceValuesServices.cs polls the binance api endpoint and saves the data
+        //to memory cache, which is then exposed here for clients to read
 
         [HttpGet]
         [Route("com/ticker/24hr")]
         public ActionResult ComTicker([FromQuery] string symbol)
         {
-            //_memoryCache.TryGetValue("comTicker", out string tickerResult);
-            //return tickerResult;
             return GetResultFromMemoryCacheAsync("comTicker");
         }
 
@@ -85,8 +78,6 @@ namespace BinanceInterceptor.Controllers
         [Route("com/exchangeInfo")]
         public ActionResult ComExchange()
         {
-            //_memoryCache.TryGetValue("comExchangeInfo", out string exchangeInfoResult);
-            //return exchangeInfoResult;
             return GetResultFromMemoryCacheAsync("comExchangeInfo");
         }
 
@@ -94,8 +85,6 @@ namespace BinanceInterceptor.Controllers
         [Route("com/ping")]
         public ActionResult ComPing()
         {
-            //_memoryCache.TryGetValue("comPing", out string pingResult);
-            //return pingResult;
             return GetResultFromMemoryCacheAsync("comPing");
         }
 
@@ -103,8 +92,6 @@ namespace BinanceInterceptor.Controllers
         [Route("com/depth")]
         public ActionResult ComDepth([FromQuery] string symbol, int limit)
         {
-            //_memoryCache.TryGetValue("comDepthBtcUsdt", out string snapshotDepthResult);
-            //return snapshotDepthResult;
             return GetResultFromMemoryCacheAsync("comDepthBtcUsdt");
         }
 
@@ -112,11 +99,9 @@ namespace BinanceInterceptor.Controllers
         [Route("com/time")]
         public ActionResult ComTimeAsync()
         {
-            //_memoryCache.TryGetValue("comTime", out string serverTimeResult);
-            //return serverTimeResult;
-            //Response.Headers.ContentType = "application/x-www-form-urlencoded";
             return GetResultFromMemoryCacheAsync("comTime");
         }
+        #endregion
 
         private ActionResult GetResultFromMemoryCacheAsync(string cacheKey)
         {
@@ -132,30 +117,16 @@ namespace BinanceInterceptor.Controllers
                 return Content(cachedHttpResponse.Content);
             }
             return BadRequest();
-
-
-
-            //_memoryCache.TryGetValue(cacheKey, out HttpResponseMessage cachedHttpResponse);
-            //if (cachedHttpResponse != null)
-            //{
-            //    foreach (var header in cachedHttpResponse.Content.Headers)
-            //    {
-            //        string headerName = header.Key;
-            //        string headerContent = string.Join(";", header.Value.ToArray());
-            //        Response.Headers.Add(headerName, headerContent);
-            //    }
-            //    var data = await cachedHttpResponse.Content.ReadAsStringAsync();
-            //    return Content(data);
-            //}
-            //return BadRequest();
         }
 
-        //STREAM.BINANCE.COM WEBSOCKET
-        //=================================================================================
+        //API endpoint that the clients connect to and recieve the re-streamed websocket data from binance
+        //the websocket data from binance is being added to the memory cache in 'BinanceWebSocketServices.cs'
+        //the clients read the websocket data from memory cache
 
         [HttpGet("/ws")]
         public async Task Get()
         {
+            //Accept websocket request
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
                 using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
@@ -165,6 +136,8 @@ namespace BinanceInterceptor.Controllers
                     ServerMaxWindowBits = 15 
                 });
                 Debug.WriteLine(LogLevel.Information, "WebSocket connection established");
+
+                //Start websocket data transfer
                 await Echo(webSocket);
             }
             else
@@ -175,9 +148,16 @@ namespace BinanceInterceptor.Controllers
 
         private async Task Echo(WebSocket webSocket)
         {
+            //This code waits for the newly connected client to send data subscribing to certain streams
+            //we dont care what they subscribe because we are only sending them the stream data we already got from binance
+            //where we already subscribed to the data streams
+
             var buffer = new byte[1024 * 4];
             var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
+            //Sending the messages that the original binance would when subscribing to streams
+            //this is just because the client wont start processing the data unless we send them the below
+            //subscribe result messages
             if (result.EndOfMessage)
             {
                 string subscribeResult1 = "{\"result\": null, \"id\": 1}";
@@ -185,19 +165,16 @@ namespace BinanceInterceptor.Controllers
 
                 await webSocket.SendAsync(GetBytes(subscribeResult1), WebSocketMessageType.Text, true, CancellationToken.None);
                 await webSocket.SendAsync(GetBytes(subscribeResult2), WebSocketMessageType.Text, true, CancellationToken.None);
-
             }
 
             Debug.WriteLine(LogLevel.Information, "Message received from Client, starting Websocket conneciton");
-            //var timer = new PeriodicTimer(TimeSpan.FromSeconds(0.05));
+
             MemoryStream lastBinanceDataStream = new MemoryStream();
 
+            //while websocket connection is open, keep checking the asp.net global memory cache to see if the 'binanceStreamData' 
+            //has changed. If it did, then send it to the connected client
             while (!result.CloseStatus.HasValue)
             {
-                //await timer.WaitForNextTickAsync();
-                //_memoryCache.TryGetValue("binanceStreamData", out string binanceStreamData);
-                //if(binanceStreamData != lastBinanceDataStream)
-                //    await webSocket.SendAsync(GetBytes(binanceStreamData), WebSocketMessageType.Text, true, CancellationToken.None);
 
                 _memoryCache.TryGetValue("binanceStreamData", out MemoryStream binanceStreamData);
                 if(binanceStreamData != lastBinanceDataStream)
@@ -207,16 +184,8 @@ namespace BinanceInterceptor.Controllers
 
                 lastBinanceDataStream = binanceStreamData;
 
-                //var serverMsg = Encoding.UTF8.GetBytes($"Server: Hello. You said: {Encoding.UTF8.GetString(buffer)}");
-                //await webSocket.SendAsync(new ArraySegment<byte>(serverMsg, 0, serverMsg.Length), result.MessageType, result.EndOfMessage, CancellationToken.None);
-                //_logger.Log(LogLevel.Information, "Message sent to Client");
-
-                //result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                //_logger.Log(LogLevel.Information, "Message received from Client");
-
             }
             await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-            //_logger.Log(LogLevel.Information, "WebSocket connection closed");
         }
 
         static byte[] GetBytes(string str)
